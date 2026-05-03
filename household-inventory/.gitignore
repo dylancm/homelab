@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Editor swap files
+*.swp
+*.swo
+*~
+
+# Local secrets / runtime state — never commit
+**/.env
+infra/reconciler/data/state.db
+infra/reconciler/data/state.db-*
+infra/grocy/data/
+infra/mealie/data/
+infra/mealie/postgres/

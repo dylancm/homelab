@@ -1,0 +1,4 @@
+# Mealie food name (lowercase, exact) -> Grocy product ID
+# Update this whenever you import a new recipe with a new ingredient.
+# Hot-reload after edits via: POST /food-map/reload
+mappings: {}

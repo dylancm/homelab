@@ -1,0 +1,16 @@
+grocy:
+  base_url: https://grocy.home.nthparallel.com
+  # api_key sourced from GROCY_API_KEY env var
+
+mealie:
+  base_url: https://mealie.home.nthparallel.com
+  household_id: 1
+  # api_token sourced from MEALIE_API_TOKEN env var
+
+reconciler:
+  food_map_path: /data/food_map.yaml
+  state_db_path: /data/state.db
+  week_starts_on: monday
+  cron_enabled: true
+  cron_day: sunday
+  cron_hour: 6

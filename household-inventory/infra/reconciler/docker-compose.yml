@@ -1,0 +1,13 @@
+services:
+  reconciler:
+    build: ./code
+    container_name: reconciler
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    environment:
+      - GROCY_API_KEY=${GROCY_API_KEY}
+      - MEALIE_API_TOKEN=${MEALIE_API_TOKEN}
+      - TZ=America/Chicago
+    volumes:
+      - ./data:/data

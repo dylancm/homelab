@@ -1,0 +1,14 @@
+grocy.home.nthparallel.com {
+    import cloudflare_tls
+    reverse_proxy kitchen-vm.home.nthparallel.com:9283
+}
+
+mealie.home.nthparallel.com {
+    import cloudflare_tls
+    reverse_proxy kitchen-vm.home.nthparallel.com:9925
+}
+
+kitchen-api.home.nthparallel.com {
+    import cloudflare_tls
+    reverse_proxy kitchen-vm.home.nthparallel.com:9000
+}

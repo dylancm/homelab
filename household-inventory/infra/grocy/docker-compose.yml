@@ -1,0 +1,24 @@
+services:
+  grocy:
+    image: lscr.io/linuxserver/grocy:latest
+    container_name: grocy
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Chicago
+      # Feature flags — Grocy reads any GROCY_<SETTING> env var as an override
+      # for the Setting(...) calls in /app/www/config-dist.php. Only the
+      # deviations from defaults are listed; everything else keeps its default.
+      # Off (defaults are on; we don't use these):
+      - GROCY_FEATURE_FLAG_CHORES=false
+      - GROCY_FEATURE_FLAG_TASKS=false
+      - GROCY_FEATURE_FLAG_BATTERIES=false
+      - GROCY_FEATURE_FLAG_EQUIPMENT=false
+      - GROCY_FEATURE_FLAG_CALENDAR=false
+      # On (default is off; we want it for product labels):
+      - GROCY_FEATURE_FLAG_LABEL_PRINTER=true
+    volumes:
+      - ./data:/config
+    ports:
+      - "9283:80"
