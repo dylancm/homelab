@@ -1,0 +1,67 @@
+# Sample input file for the Grocy loader.
+#
+# Three patterns are shown:
+#   1. Discrete (counted): a 24-pack of bottled water — one purchase unit, one
+#      stock unit, no conversions needed.
+#   2. Weighable bulk: a 5-lb bag of flour — purchased by Bag, stocked in
+#      grams, with a per-product Bag->g conversion.
+#   3. Multi-pack of identical pieces: a dozen eggs — purchased by Pack,
+#      stocked as Pieces, with a 1 Pack = 12 Pieces conversion.
+#
+# All names below match real entities in your Grocy at the time this file was
+# written. Adjust to taste before pointing the loader at your real list.
+
+products:
+  # --- 1. Discrete: bottled water (24-pack treated as one purchasable Pack) ---
+  - name: "Ozarka Spring Water 24-pack"
+    description: "16.9 fl oz bottles, 24 per case."
+    barcode: "0073430000017"
+    qu_purchase: Pack
+    qu_stock: Pack
+    location: Pantry
+    product_group: Beverages
+    shopping_location: HEB
+    min_stock_amount: 1
+    userfields:
+      heb_sku: "HEB-WTR-001"
+      heb_url: "https://www.heb.com/product-detail/example-water"
+
+  # --- 2. Weighable bulk: 5-lb bag of all-purpose flour, stocked in grams ---
+  - name: "All-Purpose Flour"
+    description: "Standard enriched bleached wheat flour."
+    barcode: "0001600010204"
+    qu_purchase: Bag
+    qu_stock: g
+    conversions:
+      - from: Bag
+        to: g
+        factor: 2268      # 5 lb ≈ 2268 g
+      - from: Cup
+        to: g
+        factor: 120       # AP flour, sifted-ish
+    location: Pantry
+    product_group: Pantry
+    shopping_location: HEB
+    min_stock_amount: 1
+    default_best_before_days: 365
+    userfields:
+      heb_sku: "HEB-FLR-001"
+      pack_size_grams: 2268
+    notes: "Stored in airtight container after opening."
+
+  # --- 3. Multi-pack: dozen eggs, purchased by Pack, stocked as Pieces ---
+  - name: "Large Eggs (Dozen)"
+    description: "Grade A large brown eggs, 12 ct."
+    qu_purchase: Pack
+    qu_stock: Piece
+    conversions:
+      - from: Pack
+        to: Piece
+        factor: 12
+    location: Fridge
+    product_group: "Dairy & Eggs"
+    shopping_location: HEB
+    min_stock_amount: 6
+    default_best_before_days: 28
+    userfields:
+      heb_sku: "HEB-EGG-DZ-01"
