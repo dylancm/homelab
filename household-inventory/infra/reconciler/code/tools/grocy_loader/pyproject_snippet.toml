@@ -1,0 +1,17 @@
+# Merge into infra/reconciler/code/pyproject.toml
+#
+# These are the only NEW dependencies the loader adds. httpx, pydantic, and
+# pyyaml are already in the reconciler's deps and are reused as-is.
+
+[project]
+dependencies = [
+    # ...existing deps...
+    "typer>=0.12",
+    "python-dotenv>=1.0",
+]
+
+[dependency-groups]
+dev = [
+    # ...existing dev deps...
+    "pytest-httpx>=0.30",
+]
