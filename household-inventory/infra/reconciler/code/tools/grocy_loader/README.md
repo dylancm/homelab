@@ -12,8 +12,7 @@ file you maintain by hand.
 ```bash
 cd infra/reconciler/code
 
-# 1. Add the loader's deps to the reconciler project (one-time):
-#    Merge tools/grocy_loader/pyproject_snippet.toml into pyproject.toml.
+# 1. Install deps (typer, python-dotenv, pytest-httpx already in pyproject).
 uv sync
 
 # 2. Configure auth.
