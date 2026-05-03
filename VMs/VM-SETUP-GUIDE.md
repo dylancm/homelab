@@ -55,10 +55,14 @@ Replace `br-enp2s0` with your bridge interface name.
 
 VMs are provisioned from a golden base image using `vm-create`. The entire process is automated — no interactive installer, no manual post-install steps.
 
+### Naming convention
+
+**Always name VMs with a `-vm` suffix** (e.g. `kitchen-vm`, `daredevil-vm`, `metrics-vm`). The VM name becomes the hostname, which becomes the DNS record (`<name>-vm.home.nthparallel.com`) and the upstream target in Caddy. Reserving the bare name (e.g. `kitchen`, `metrics`) for the *service* hostname prevents collisions when the service's public name and the VM hosting it would otherwise be identical — and makes ownership obvious in DNS, Caddy, and `virsh list` output.
+
 ### Normal workflow
 
 ```bash
-vm-create --name <vm-name>
+vm-create --name <name>-vm
 ```
 
 The script:
@@ -75,9 +79,9 @@ The script:
 **Options:**
 
 ```bash
-vm-create --name <name>                          # defaults: 4 vCPUs, 8GB RAM, 20G disk
-vm-create --name <name> --ram 16384 --cpus 8    # custom resources
-vm-create --name <name> --disk 100G             # custom disk size
+vm-create --name kitchen-vm                          # defaults: 4 vCPUs, 8GB RAM, 20G disk
+vm-create --name builder-vm --ram 16384 --cpus 8    # custom resources
+vm-create --name archive-vm --disk 100G             # custom disk size
 ```
 
 **After the script completes:**

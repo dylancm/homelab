@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # vm-create — provision a new KVM VM from the ubuntu-base cloud image
 # Usage: vm-create --name <name> [--ram <mb>] [--cpus <n>] [--disk <size>]
+#
+# Requires:
+#   - dylan in libvirt, kvm groups (for virsh/virt-install without sudo)
+#   - sudo only for zfs commands (/etc/sudoers.d/vm-create)
+#   - chmod o+x ~ (so libvirt-qemu can read seed ISOs from ~/vm-init/seeds/)
 
 set -euo pipefail
 
@@ -14,9 +19,7 @@ ZFS_BASE="tank/vms/ubuntu-base@ready"
 ZFS_VMS="tank/vms"
 BRIDGE="br-enp2s0"
 SEED_TEMPLATE="$HOME/vm-init/user-data"
-META_TEMPLATE="$HOME/vm-init/meta-data"
-CLOUD_INIT_DIR="/var/lib/libvirt/cloud-init"
-SSH_KEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJST7uGpGw3RStcmqJHA4WvyVKx++WtcJJdOpPMAekQI dylan@sim-server"
+CLOUD_INIT_DIR="$HOME/vm-init/seeds"
 
 # ── Colours ─────────────────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
@@ -60,11 +63,11 @@ done
 [[ -z "$VM_NAME" ]] && die "--name is required"
 
 # ── Validate ─────────────────────────────────────────────────────────────────
-sudo zfs list "${ZFS_BASE%@*}" &>/dev/null || die "Base zvol not found: ${ZFS_BASE%@*}"
+sudo zfs list "${ZFS_BASE%@*}" &>/dev/null               || die "Base zvol not found: ${ZFS_BASE%@*}"
 sudo zfs list "${ZFS_BASE%@*}@${ZFS_BASE#*@}" &>/dev/null || die "Base snapshot not found: ${ZFS_BASE}"
-sudo virsh dominfo "$VM_NAME" &>/dev/null && die "VM '$VM_NAME' already exists in libvirt"
-sudo zfs list "${ZFS_VMS}/${VM_NAME}" &>/dev/null && die "ZFS dataset ${ZFS_VMS}/${VM_NAME} already exists"
-[[ -f "$SEED_TEMPLATE" ]] || die "user-data template not found: $SEED_TEMPLATE"
+virsh dominfo "$VM_NAME" &>/dev/null                     && die "VM '$VM_NAME' already exists in libvirt"
+sudo zfs list "${ZFS_VMS}/${VM_NAME}" &>/dev/null        && die "ZFS dataset ${ZFS_VMS}/${VM_NAME} already exists"
+[[ -f "$SEED_TEMPLATE" ]]                                || die "user-data template not found: $SEED_TEMPLATE"
 
 # ── Summary ──────────────────────────────────────────────────────────────────
 echo ""
@@ -80,13 +83,12 @@ sudo zfs clone "${ZFS_BASE}" "${ZFS_VMS}/${VM_NAME}"
 
 # ── Step 2: Generate per-VM seed ISO ────────────────────────────────────────
 info "Generating cloud-init seed ISO for hostname '${VM_NAME}' ..."
+mkdir -p "${CLOUD_INIT_DIR}"
 WORK_DIR=$(mktemp -d)
 trap 'rm -rf "$WORK_DIR"' EXIT
 
-# user-data: swap in the correct hostname
 cat "$SEED_TEMPLATE" > "${WORK_DIR}/user-data"
 
-# meta-data: set hostname to VM name
 cat > "${WORK_DIR}/meta-data" <<EOF
 instance-id: ${VM_NAME}
 local-hostname: ${VM_NAME}
@@ -94,11 +96,11 @@ EOF
 
 SEED_ISO="${CLOUD_INIT_DIR}/${VM_NAME}-seed.iso"
 cloud-localds "${WORK_DIR}/seed.iso" "${WORK_DIR}/user-data" "${WORK_DIR}/meta-data"
-sudo cp "${WORK_DIR}/seed.iso" "${SEED_ISO}"
+cp "${WORK_DIR}/seed.iso" "${SEED_ISO}"
 
 # ── Step 3: Boot the VM ──────────────────────────────────────────────────────
 info "Starting virt-install ..."
-sudo virt-install \
+virt-install \
   --name "${VM_NAME}" \
   --ram "${RAM_MB}" \
   --vcpus "${VCPUS}" \
@@ -115,8 +117,7 @@ sudo virt-install \
 # ── Step 4: Wait for SSH to come up ─────────────────────────────────────────
 info "Waiting for SSH to become available ..."
 
-# Get the VM's MAC address from libvirt
-MAC=$(sudo virsh domiflist "${VM_NAME}" 2>/dev/null \
+MAC=$(virsh domiflist "${VM_NAME}" 2>/dev/null \
   | awk '/bridge/ {print $5}' | head -1) || true
 info "VM MAC address: ${MAC:-unknown}"
 
@@ -156,7 +157,7 @@ IP=""
 while [[ $ELAPSED -lt $TIMEOUT ]]; do
   sleep 5
   ELAPSED=$((ELAPSED + 5))
-  IP=$(sudo virsh domifaddr "${VM_NAME}" --source agent 2>/dev/null \
+  IP=$(virsh domifaddr "${VM_NAME}" --source agent 2>/dev/null \
     | awk '/ipv4/ && !/127\.0\.0/ {print $4}' \
     | cut -d/ -f1 | head -1) || true
   if [[ -n "$IP" ]]; then
@@ -172,7 +173,7 @@ sudo zfs snapshot "${ZFS_VMS}/${VM_NAME}@fresh"
 
 # ── Step 7: Set autostart ────────────────────────────────────────────────────
 info "Enabling autostart on host boot ..."
-sudo virsh autostart "${VM_NAME}"
+virsh autostart "${VM_NAME}"
 
 # ── Done ─────────────────────────────────────────────────────────────────────
 echo ""
@@ -184,7 +185,7 @@ if [[ -n "$IP" ]]; then
 else
   warn "  Could not detect IP via guest agent."
   warn "  SSH:         ssh dylan@${VM_HOST} (once DNS propagates)"
-  warn "  Or check:    sudo virsh domifaddr ${VM_NAME} --source agent"
+  warn "  Or check:    virsh domifaddr ${VM_NAME} --source agent"
 fi
 echo ""
 warn "Remaining manual steps:"
