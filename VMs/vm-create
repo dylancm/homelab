@@ -69,6 +69,15 @@ virsh dominfo "$VM_NAME" &>/dev/null                     && die "VM '$VM_NAME' a
 sudo zfs list "${ZFS_VMS}/${VM_NAME}" &>/dev/null        && die "ZFS dataset ${ZFS_VMS}/${VM_NAME} already exists"
 [[ -f "$SEED_TEMPLATE" ]]                                || die "user-data template not found: $SEED_TEMPLATE"
 
+# --disk size sanity. ZFS clones inherit the source volsize, so we resize
+# after clone if the user asked for more. Refuse shrinking — that would
+# truncate the cloned filesystem.
+TARGET_BYTES=$(numfmt --from=iec "${DISK_SIZE}" 2>/dev/null) \
+  || die "Invalid --disk value: '${DISK_SIZE}' (expected e.g. 20G, 100G, 50000M)"
+BASE_BYTES=$(sudo zfs get -Hpo value volsize "${ZFS_BASE%@*}")
+(( TARGET_BYTES >= BASE_BYTES )) \
+  || die "--disk ${DISK_SIZE} is smaller than base image volsize ($(numfmt --to=iec --suffix=B "${BASE_BYTES}")). Refusing to shrink."
+
 # ── Summary ──────────────────────────────────────────────────────────────────
 echo ""
 info "Creating VM: ${VM_NAME}"
@@ -80,6 +89,11 @@ echo ""
 # ── Step 1: Clone ZFS snapshot ───────────────────────────────────────────────
 info "Cloning ${ZFS_BASE} → ${ZFS_VMS}/${VM_NAME} ..."
 sudo zfs clone "${ZFS_BASE}" "${ZFS_VMS}/${VM_NAME}"
+
+if (( TARGET_BYTES > BASE_BYTES )); then
+  info "Resizing zvol to ${DISK_SIZE} (cloud-init growpart will extend the FS on first boot) ..."
+  sudo zfs set volsize="${DISK_SIZE}" "${ZFS_VMS}/${VM_NAME}"
+fi
 
 # ── Step 2: Generate per-VM seed ISO ────────────────────────────────────────
 info "Generating cloud-init seed ISO for hostname '${VM_NAME}' ..."
